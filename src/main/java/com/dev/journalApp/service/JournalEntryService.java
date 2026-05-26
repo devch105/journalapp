@@ -2,12 +2,14 @@ package com.dev.journalApp.service;
 
 import com.dev.journalApp.Repository.JournalEntryRepository;
 import com.dev.journalApp.entity.User;
+import com.dev.journalApp.service.UserService;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 
 
 import com.dev.journalApp.entity.JournalEntry;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.time.LocalDateTime;
@@ -24,13 +26,20 @@ public class JournalEntryService {
     private UserService userService;
 
     // save and Update Entry
+   @Transactional
     public JournalEntry saveEntry(JournalEntry journalEntry, User user) {
-        journalEntry.setDate(LocalDateTime.now());
-        journalEntry.setJournalUserId(user.getId());
-       JournalEntry entry =  journalEntryRepository.save(journalEntry);
-       user.setJournalEntries(List.of(entry));
-       userService.saveUser(user);
-        return journalEntry;
+       try {
+           journalEntry.setDate(LocalDateTime.now());
+           journalEntry.setJournalUserId(user.getId());
+           JournalEntry entry =  journalEntryRepository.save(journalEntry);
+           // may be some issue arrive  then journal entry will be update but  suer might not update;
+           user.getJournalEntries().add(entry);
+           userService.saveUser(user);
+           return journalEntry;
+       }catch (Exception e) {
+           System.out.println(e.getMessage());
+           throw new RuntimeException("Error saving entry: " + e.getMessage());
+       }
     }
 
     // get all entry
