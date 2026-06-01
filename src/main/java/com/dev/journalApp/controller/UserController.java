@@ -6,11 +6,11 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -20,29 +20,8 @@ public class UserController {
    @Autowired
    private UserService  userService;
 
-    /* Set User */
-    @PostMapping("/set-user")
-    public ResponseEntity<User> setUser(@RequestBody User User){
-        try{
-            userService.saveUser(User);
-            return new ResponseEntity<>(User , HttpStatus.OK);
-        } catch (Exception e){
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
-    }
-
-    /*Get All User*/
-    @GetMapping("/get-all")
-    public ResponseEntity<List<User>> getAllusers(){
-       try {
-           List<User>  list = new ArrayList<>();
-           list = userService.getAllusers();
-           return new ResponseEntity<>(list , HttpStatus.OK);
-       } catch (Exception e) {
-           return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-       }
-    }
-
+   @Autowired
+   private PasswordEncoder passwordEncoder;
     /*Get User By Id*/
     @GetMapping("/id/{myid}")
     public  ResponseEntity<User> getUserById(@PathVariable ObjectId myid){
@@ -76,36 +55,28 @@ public class UserController {
         }
     }
 
-    /* Update user by Id*/
-    @PutMapping("/id/{myid}")
-    public ResponseEntity<?> updateUserById(@PathVariable ObjectId myid , @RequestBody User newuser){
-       try {
-           User user = userService.findById(myid).orElse(null);
-           if(user !=null){
-               user.setUserName( newuser.getUserName() !=  null && !newuser.getUserName().equals("") ? newuser.getUserName() : user.getUserName());
-               user.setPassword(newuser.getPassword() != null  && !newuser.getPassword().equals("") ? newuser.getPassword() : user.getPassword());
-           }
-
-           userService.saveUser(user);
-           return new ResponseEntity<>(user , HttpStatus.OK);
-       }catch (Exception e){
-           return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-       }
-    }
-
-
-    @PutMapping("/name/{name}")
-    public ResponseEntity<?> updateUserByName(@PathVariable String name, @RequestBody User newuser){
+    @PutMapping("/update")
+    public ResponseEntity<?> updateUserByName( @RequestBody User newuser){
         try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String name = authentication.getName();
+            System.out.println(name);
             User user = userService.findByName(name);
-            if(user !=null){
-                user.setUserName( newuser.getUserName() !=  null && !newuser.getUserName().equals("") ? newuser.getUserName() : user.getUserName());
-                user.setPassword(newuser.getPassword() != null  && !newuser.getPassword().equals("") ? newuser.getPassword() : user.getPassword());
+            if(user == null){
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
 
-            userService.saveUser(user);
+            if(newuser.getUserName() != null && !newuser.getUserName().trim().isEmpty()){
+                user.setUserName(newuser.getUserName());
+            }
+            if(newuser.getPassword()!=null && !newuser.getPassword().trim().isEmpty()){
+                user.setPassword(passwordEncoder.encode(newuser.getPassword()));
+            }
+            userService.updateUser(user);
             return new ResponseEntity<>(user , HttpStatus.OK);
         }catch (Exception e){
+            System.out.println("Exception -------------------------> "+e.getMessage()+" -------|| ");
+            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }

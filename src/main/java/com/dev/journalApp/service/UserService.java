@@ -2,10 +2,10 @@ package com.dev.journalApp.service;
 
 
 import com.dev.journalApp.Repository.UserRepository;
-import com.dev.journalApp.entity.JournalEntry;
 import com.dev.journalApp.entity.User;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -17,12 +17,30 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+  
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
 
     // save and Update Entry
-    public boolean saveUser(User user){
+    public boolean updateUser(User user){
         userRepository.save(user);
         return true;
     }
+
+    // save new user
+    public boolean saveNewUser(User user){
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        if(user.getRoles()==null && user.getRoles().isEmpty()){
+            user.setRoles(List.of("USER"));
+        }
+        userRepository.save(user);
+        return true;
+    }
+
+
+
+
 
     // get all entry
     public List<User> getAllusers(){
